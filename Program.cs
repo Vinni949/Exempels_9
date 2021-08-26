@@ -10,7 +10,7 @@ namespace Exemple_9
         static string token = "1982991683:AAGHIoMbqau49ljCVd3Kb_w8NSa6qXowaBM";
         static TelegramBotClient client;
         static bool starting = false;
-
+        static int number = 0;
         static void Main(string[] args)
         {
             client = new TelegramBotClient(token);
@@ -18,11 +18,11 @@ namespace Exemple_9
 
             client.OnMessage += Client_OnMessage;
             Console.ReadKey();
-            
+
 
         }
-        static Dictionary<string, string> FileId = new Dictionary<string, string>();
-       
+        static List<string> FileId = new List<string>();
+
         /// <summary>
         /// Меню бота
         /// </summary>
@@ -38,74 +38,59 @@ namespace Exemple_9
                     starting = true;
                 }
             }
-           else
+            else
             {
                 client.SendTextMessageAsync(new Telegram.Bot.Types.ChatId(e.Message.Chat.Id), "Перенесите файл для загрузки его в бота, " +
-                          "\nвведите /list для получения списка загруженных файлов." +
-                          "\nВведите /download и ключ обьекта для загрузки файла на ПК.");
+                          "\nвведите /list для получения списка загруженных файлов.");
+                // "\nВведите /download и ключ обьекта для загрузки файла на ПК.");
                 if (e.Message.Text == "/list")
                 {
-                    string text = string.Join('\n', FileId.Keys);
-                    client.SendTextMessageAsync(new Telegram.Bot.Types.ChatId(e.Message.Chat.Id), text);
-                }
-                if (e.Message.Type == Telegram.Bot.Types.Enums.MessageType.Document)
-                {
-                    FileId.Add(e.Message.Document.FileId, e.Message.Document.FileName);
-                }
-                if (e.Message.Text != null && e.Message.Text.StartsWith("/download"))
-                {
-
-                    string[] array = e.Message.Text.Split(" ");
-
-                    if (array.Length > 1)
+                    if (number > 0)
                     {
-                        client.SendTextMessageAsync(new Telegram.Bot.Types.ChatId(e.Message.Chat.Id), array[1]);
-                        if (FileId.ContainsKey(array[1]))
-                        {
-                            using (Stream stream = File.OpenWrite(FileId[array[1]]))
-                            {
-                                DownLoad(array[1], FileId[array[1]]);
-                                client.SendTextMessageAsync(new Telegram.Bot.Types.ChatId(e.Message.Chat.Id), "Файл загружен на Ваш комьютер, ищите в корневой папке!");
-                            }
-                        }
-                        else
-                        {
-                            client.SendTextMessageAsync(new Telegram.Bot.Types.ChatId(e.Message.Chat.Id), "Файл не существует");
-
-                        }
+                        string text = number.ToString() + " " + FileId[number - 1];
+                        client.SendTextMessageAsync(new Telegram.Bot.Types.ChatId(e.Message.Chat.Id), text);
                     }
                     else
                     {
-                        client.SendTextMessageAsync(new Telegram.Bot.Types.ChatId(e.Message.Chat.Id), "Не введен ключ");
+                        client.SendTextMessageAsync(new Telegram.Bot.Types.ChatId(e.Message.Chat.Id), "Нет загруженных файлов!");
+                    }
+                }
+                    if (e.Message.Type == Telegram.Bot.Types.Enums.MessageType.Document)
+                    {
+                        FileId.Add(e.Message.Document.FileName);
+
+
+                        Console.WriteLine(number+" "+e.Message.Document.FileName);
+                       
+
+                        DownLoad(e.Message.Document.FileId, e.Message.Document.FileName);
                     }
 
+                    Console.WriteLine(e.Message.Text);
                 }
 
-                Console.WriteLine(e.Message.Text);
             }
-            
+
+
+
+
+
+            /// <summary>
+            /// скачивание файла
+            /// </summary>
+            /// <param name="fileId"></param>
+            /// <param name="path"></param>
+            static async void DownLoad(string fileId, string path)
+            {
+                var file = await client.GetFileAsync(fileId);
+                FileStream fs = new FileStream("_" + path, FileMode.Create);
+                await client.DownloadFileAsync(file.FilePath, fs);
+                fs.Close();
+
+                fs.Dispose();
+
+            }
+
         }
-
-
-
-
-
-        /// <summary>
-        /// скачивание файла
-        /// </summary>
-        /// <param name="fileId"></param>
-        /// <param name="path"></param>
-        static async void DownLoad(string fileId, string path)
-        {
-            var file = await client.GetFileAsync(fileId);
-            FileStream fs = new FileStream("_" + path, FileMode.Create);
-            await client.DownloadFileAsync(file.FilePath, fs);
-            fs.Close();
-
-            fs.Dispose();
-
-        }
-
     }
-}
 
